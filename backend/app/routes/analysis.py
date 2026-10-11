@@ -61,7 +61,8 @@ async def analyze_medical_image(
         img_xai = xai_service.explain_image(
             image_path=file_path,
             vit_model=image_service.model,
-            vit_processor=image_service.processor
+            vit_processor=image_service.processor,
+            target_condition=img_result.get("predictedCondition")
         )
         
         return {

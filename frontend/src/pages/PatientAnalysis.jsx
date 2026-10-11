@@ -218,26 +218,35 @@ const PatientAnalysis = () => {
             </div>
 
             <div>
-              <h4 className="font-semibold text-slate-700 mb-2">Text XAI: Key Feature Contributions</h4>
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="font-semibold text-slate-700">Clinical Text XAI (SHAP Attributions)</h4>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-teal-100 text-teal-800">SHAP Analysis</span>
+              </div>
               {textXAI?.importantTextFeatures?.length > 0 ? (
                 <div className="space-y-2">
                   {textXAI.importantTextFeatures.map((feat, idx) => (
                     <div key={idx} className="flex items-center justify-between p-2.5 bg-slate-50 rounded border border-slate-200">
-                      <span className="font-semibold text-slate-800 text-sm">{feat.feature}</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className={`w-2 h-2 rounded-full ${feat.impact === 'Positive' ? 'bg-teal-500' : 'bg-rose-500'}`}></span>
+                        <span className="font-semibold text-slate-800 text-sm">{feat.feature}</span>
+                        <span className="text-[10px] text-slate-500 font-medium">({feat.impact})</span>
+                      </div>
                       <div className="flex items-center gap-2">
-                        <div className="w-24 bg-slate-200 h-2 rounded-full overflow-hidden">
+                        <div className="w-20 bg-slate-200 h-2 rounded-full overflow-hidden">
                           <div 
-                            className="bg-teal-500 h-full" 
-                            style={{ width: `${Math.min(100, feat.contribution * 100)}%` }}
+                            className={`h-full ${feat.impact === 'Positive' ? 'bg-teal-500' : 'bg-rose-500'}`}
+                            style={{ width: `${Math.min(100, (feat.contribution || Math.abs(feat.shapValue || 0)) * 100)}%` }}
                           ></div>
                         </div>
-                        <span className="text-xs text-slate-600 font-mono">{feat.contribution}</span>
+                        <span className="text-xs text-slate-600 font-mono">
+                          {feat.shapValue !== undefined ? (feat.shapValue > 0 ? `+${feat.shapValue}` : feat.shapValue) : feat.contribution}
+                        </span>
                       </div>
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-slate-500">Feature contributions calculated from scikit-learn model weights.</p>
+                <p className="text-sm text-slate-500">SHAP feature values computed across linear model log-odds space.</p>
               )}
             </div>
           </div>
@@ -250,9 +259,9 @@ const PatientAnalysis = () => {
           <div className="card-header justify-between">
             <div className="flex items-center gap-2">
               <ImageIcon className="w-5 h-5 text-teal-600" />
-              <h3>Chest X-Ray ViT Model (img_model)</h3>
+              <h3>Chest X-Ray ViT Model & Grad-CAM</h3>
             </div>
-            <span className="badge badge-accent">Vision Transformer (15 Labels)</span>
+            <span className="badge badge-accent">ViT + Grad-CAM</span>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -297,16 +306,19 @@ const PatientAnalysis = () => {
             </div>
 
             <div>
-              <h4 className="font-semibold text-slate-700 mb-2">Vision Transformer Spatial Attention Heatmap XAI:</h4>
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="font-semibold text-slate-700">Chest X-Ray Grad-CAM Saliency Heatmap</h4>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-sky-100 text-sky-800">Grad-CAM XAI</span>
+              </div>
               {imageXAI?.heatmapBase64 ? (
                 <div className="heatmap-box border rounded p-2 bg-slate-900 text-center">
-                  <img src={imageXAI.heatmapBase64} alt="ViT Heatmap" className="max-h-64 mx-auto rounded" />
+                  <img src={imageXAI.heatmapBase64} alt="ViT Grad-CAM Heatmap" className="max-h-64 mx-auto rounded" />
                   <p className="text-xs text-slate-300 mt-2 px-2">
                     {imageXAI.description}
                   </p>
                 </div>
               ) : (
-                <p className="text-sm text-slate-500">Heatmap visualization computed from ViT patch self-attention weights.</p>
+                <p className="text-sm text-slate-500">Grad-CAM saliency map computed by backpropagating ViT class gradients.</p>
               )}
             </div>
           </div>

@@ -65,12 +65,7 @@ class TextInferenceService:
         except Exception as e:
             logger.error(f"Failed to load text_model.joblib: {e}")
 
-    def predict(self, text: str) -> dict:
-        if self.model is None:
-            self._load_model()
-            if self.model is None:
-                raise RuntimeError("Text ML model could not be loaded.")
-
+    def extract_features(self, text: str) -> tuple[np.ndarray, dict]:
         text_lower = text.lower()
         match_scores = {}
         for idx, keywords in CLINICAL_SYMPTOM_MAP.items():
@@ -88,10 +83,20 @@ class TextInferenceService:
                 match_scores[idx] = score
 
         vec = np.zeros((1, 768), dtype=np.float32)
-        for idx, score in match_scores.items():
-            if hasattr(self.model, "coef_"):
+        if self.model is not None and hasattr(self.model, "coef_"):
+            for idx, score in match_scores.items():
                 top_dims = np.argsort(self.model.coef_[idx])[::-1][:10]
                 vec[0, top_dims] += score * 0.5
+
+        return vec, match_scores
+
+    def predict(self, text: str) -> dict:
+        if self.model is None:
+            self._load_model()
+            if self.model is None:
+                raise RuntimeError("Text ML model could not be loaded.")
+
+        vec, match_scores = self.extract_features(text)
 
         # Predict class & probabilities using text_model.joblib
         probs = self.model.predict_proba(vec)[0]

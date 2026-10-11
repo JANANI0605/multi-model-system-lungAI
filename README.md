@@ -18,9 +18,9 @@ A full-stack healthcare decision-support project for final-year engineering/CS c
    - **Dynamic Modality Support**: Accepts any combination of inputs (Text only, Image only, Lab only, Text+Image, Text+Lab, Lab+Image, or all three).
 
 3. **Explainable AI (XAI)**:
-   - **Text XAI**: Highlights key medical symptoms and feature weights contributing to prediction.
-   - **Image XAI**: Generates spatial patch self-attention heatmaps overlaid on Chest X-Rays.
-   - **Lab XAI**: Details abnormal parameters, status (High/Low), and clinical risk breakdown.
+   - **Text & Clinical XAI (SHAP)**: Computes SHapley Additive exPlanations (SHAP) feature attributions quantifying each clinical symptom's contribution and directional impact (Positive/Negative) relative to the baseline.
+   - **Image XAI (Grad-CAM)**: Computes Gradient-weighted Class Activation Mapping (Grad-CAM) by backpropagating class-specific gradients to the final Vision Transformer (ViT) encoder layer, generating spatial heatmaps over affected chest regions.
+   - **Laboratory XAI (SHAP-aligned)**: Details abnormal parameters, status (High/Low), and SHAP clinical risk attributions.
 
 4. **Consolidated Multimodal Synthesis**:
    - Preserves distinct label spaces (Disease Diagnoses vs. X-Ray Findings) without fake mathematical fusion.

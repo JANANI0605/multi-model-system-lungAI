@@ -139,8 +139,10 @@ class PDFReportGenerator:
             story.append(Paragraph(f"<b>Predicted Condition:</b> {text_res.get('predictedClass')} (Confidence: {int(text_res.get('confidence',0)*100)}%)", body_style))
             
             if text_xai and text_xai.get("importantTextFeatures"):
-                feat_items = [f"{item['feature']} ({item['impact']})" for item in text_xai.get("importantTextFeatures", [])[:5]]
-                story.append(Paragraph(f"<b>Key Contributing Symptoms/Features:</b> {', '.join(feat_items)}", body_style))
+                feat_items = [f"{item['feature']} ({item['impact']}, SHAP: {item.get('shapValue', item.get('contribution'))})" for item in text_xai.get("importantTextFeatures", [])[:5]]
+                story.append(Paragraph(f"<b>SHAP Feature Attributions:</b> {', '.join(feat_items)}", body_style))
+                if text_xai.get("baseValue") is not None:
+                    story.append(Paragraph(f"<b>SHAP Model Base Value:</b> {text_xai.get('baseValue')}", body_style))
             story.append(Spacer(1, 10))
 
         # 2. Laboratory Record Analysis Section
@@ -196,7 +198,8 @@ class PDFReportGenerator:
                 story.append(Paragraph("<b>Detected Conditions:</b> No acute abnormalities detected beyond threshold.", body_style))
                 
             if img_xai and img_xai.get("description"):
-                story.append(Paragraph(f"<b>ViT Explainability:</b> {img_xai.get('description')}", body_style))
+                method_name = img_xai.get("method", "Grad-CAM")
+                story.append(Paragraph(f"<b>{method_name}:</b> {img_xai.get('description')}", body_style))
             story.append(Spacer(1, 10))
 
         # Disclaimer

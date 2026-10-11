@@ -154,28 +154,34 @@ const DoctorPatientDetail = () => {
             {/* Text XAI */}
             {textResult && (
               <div className="p-3 bg-slate-50 rounded border border-slate-200">
-                <h4 className="font-semibold text-xs text-slate-600 uppercase mb-1 flex items-center gap-1">
-                  <FileText className="w-4 h-4 text-teal-600" /> Clinical Text Model:
-                </h4>
+                <div className="flex items-center justify-between mb-1">
+                  <h4 className="font-semibold text-xs text-slate-600 uppercase flex items-center gap-1">
+                    <FileText className="w-4 h-4 text-teal-600" /> Clinical Text Model (SHAP):
+                  </h4>
+                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-teal-100 text-teal-800">SHAP</span>
+                </div>
                 <p className="text-sm font-bold text-slate-800">Prediction: {textResult.predictedClass} ({Math.round(textResult.confidence * 100)}%)</p>
                 {textXAI?.importantTextFeatures && (
                   <div className="text-xs text-slate-600 mt-1">
-                    Key Terms: {textXAI.importantTextFeatures.map(f => f.feature).join(', ')}
+                    Key SHAP Attributions: {textXAI.importantTextFeatures.map(f => `${f.feature} (${f.impact})`).join(', ')}
                   </div>
                 )}
               </div>
             )}
 
-            {/* Image ViT Heatmap XAI */}
+            {/* Image ViT Grad-CAM Heatmap XAI */}
             {imageResult && (
               <div className="p-3 bg-slate-50 rounded border border-slate-200">
-                <h4 className="font-semibold text-xs text-slate-600 uppercase mb-1 flex items-center gap-1">
-                  <ImageIcon className="w-4 h-4 text-teal-600" /> Vision Transformer (ViT) Image XAI:
-                </h4>
+                <div className="flex items-center justify-between mb-1">
+                  <h4 className="font-semibold text-xs text-slate-600 uppercase flex items-center gap-1">
+                    <ImageIcon className="w-4 h-4 text-teal-600" /> Chest X-Ray Grad-CAM XAI:
+                  </h4>
+                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-sky-100 text-sky-800">Grad-CAM</span>
+                </div>
                 <p className="text-sm font-bold text-slate-800">Chest X-Ray Finding: {imageResult.predictedCondition}</p>
                 {imageXAI?.heatmapBase64 && (
                   <div className="mt-2">
-                    <img src={imageXAI.heatmapBase64} alt="ViT Spatial Heatmap" className="max-h-48 rounded border mx-auto" />
+                    <img src={imageXAI.heatmapBase64} alt="ViT Grad-CAM Heatmap" className="max-h-48 rounded border mx-auto" />
                     <p className="text-xs text-center text-slate-500 mt-1">{imageXAI.description}</p>
                   </div>
                 )}
