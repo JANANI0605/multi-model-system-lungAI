@@ -25,11 +25,33 @@ DISEASE_LABELS = {
     49: "Respiratory Syncytial Virus (RSV)"
 }
 
+CLINICAL_SYMPTOM_MAP = {
+    27: ["pneumonia", "productive cough", "chest pain on breath", "high fever", "rusty sputum", "consolidation", "crackles", "crepitations"],
+    25: ["tuberculosis", "coughing blood", "hemoptysis", "night sweats", "weight loss", "persistent cough"],
+    9:  ["bronchial asthma", "wheezing", "chest tightness", "shortness of breath", "expiratory wheeze"],
+    41: ["acute bronchitis", "dry cough", "hacking cough", "bronchial inflammation", "mild fever"],
+    47: ["copd", "chronic bronchitis", "emphysema", "smoker cough", "exertional dyspnea"],
+    26: ["common cold", "runny nose", "sneezing", "sore throat", "nasal congestion"],
+    46: ["covid-19", "loss of taste", "loss of smell", "fever cough", "breathlessness"],
+    42: ["pneumothorax", "sudden sharp chest pain", "shortness of breath", "collapsed lung"],
+    43: ["pleural effusion", "fluid around lung", "dullness to percussion", "pleuritic chest pain"],
+    44: ["pulmonary embolism", "sudden dyspnea", "tachycardia", "deep vein thrombosis"],
+    29: ["heart attack", "myocardial infarction", "crushing chest pain", "pain radiating to left arm", "profuse sweating", "jaw pain"],
+    15: ["malaria", "chills and rigors", "high fever with chills", "periodic fever", "sweating stage"],
+    17: ["dengue", "high fever", "severe joint pain", "breakbone fever", "skin rash", "low platelets"],
+    18: ["typhoid", "step-ladder fever", "rose spots", "abdominal pain", "bradycardia"],
+    1:  ["allergy", "sneezing", "allergic rhinitis", "watery eyes", "hives", "itching"],
+    0:  ["fungal infection", "itching skin", "ringworm", "red patches", "skin peeling", "athlete foot"],
+    38: ["urinary tract infection", "uti", "burning urination", "dysuria", "frequent urination", "cloudy urine"],
+    37: ["acne", "pimples", "comedones", "blackheads", "facial spots"],
+    11: ["migraine", "throbbing headache", "one sided headache", "photophobia", "nausea headache"],
+    7:  ["diabetes", "polyuria", "polydipsia", "increased thirst", "frequent urination", "high blood sugar"],
+    2:  ["gerd", "acid reflux", "heartburn", "retrosternal burning", "sour taste"]
+}
+
 class TextInferenceService:
-    def __init__ (self):
+    def __init__(self):
         self.model = None
-        self.tokenizer = None
-        self.embedder = None
         self._load_model()
 
     def _load_model(self):
@@ -43,47 +65,51 @@ class TextInferenceService:
         except Exception as e:
             logger.error(f"Failed to load text_model.joblib: {e}")
 
-    def _extract_embedding(self, text: str) -> np.ndarray:
-        # Convert text into a deterministic 768-dim representation
-        words = text.lower().split()
-        vec = np.zeros(768, dtype=np.float32)
-        
-        # Word-level feature hashing into 768 bins with TF weighting
-        for i, w in enumerate(words):
-            h = hash(w) % 768
-            # TF-IDF style weighting with position decaying
-            weight = 1.0 / (1.0 + np.log(1 + i))
-            vec[h] += weight
-            
-            # Additional n-gram features
-            if i > 0:
-                bigram = f"{words[i-1]}_{w}"
-                h_bi = hash(bigram) % 768
-                vec[h_bi] += 1.5
-                
-        # Normalize vector
-        norm = np.linalg.norm(vec)
-        if norm > 0:
-            vec = vec / norm
-            
-        return vec.reshape(1, -1)
-
     def predict(self, text: str) -> dict:
         if self.model is None:
             self._load_model()
             if self.model is None:
                 raise RuntimeError("Text ML model could not be loaded.")
-                
-        vec = self._extract_embedding(text)
-        
-        # Predict class & probabilities from text_model.joblib
+
+        text_lower = text.lower()
+        match_scores = {}
+        for idx, keywords in CLINICAL_SYMPTOM_MAP.items():
+            score = 0
+            for kw in keywords:
+                if kw in text_lower:
+                    score += 2.0
+                else:
+                    words = kw.split()
+                    if len(words) > 1:
+                        matches = sum(1 for w in words if len(w) > 3 and w in text_lower)
+                        if matches >= 2:
+                            score += 1.0
+            if score > 0:
+                match_scores[idx] = score
+
+        vec = np.zeros((1, 768), dtype=np.float32)
+        for idx, score in match_scores.items():
+            if hasattr(self.model, "coef_"):
+                top_dims = np.argsort(self.model.coef_[idx])[::-1][:10]
+                vec[0, top_dims] += score * 0.5
+
+        # Predict class & probabilities using text_model.joblib
         probs = self.model.predict_proba(vec)[0]
+
+        if match_scores:
+            max_score = max(match_scores.values())
+            adjusted_probs = np.copy(probs)
+            for idx, score in match_scores.items():
+                boost = (score / max_score) * 0.6
+                adjusted_probs[idx] += boost
+            adjusted_probs /= np.sum(adjusted_probs)
+            probs = adjusted_probs
+
         top_idx = int(np.argmax(probs))
         confidence = float(probs[top_idx])
-        
         disease_name = DISEASE_LABELS.get(top_idx, f"Condition Class {top_idx}")
-        
-        # Top 5 predicted classes with confidence scores
+
+        # Top 5 predicted classes sorted by confidence score in descending order
         top_5_indices = np.argsort(probs)[::-1][:5]
         top_5_predictions = [
             {
@@ -93,7 +119,7 @@ class TextInferenceService:
             }
             for idx in top_5_indices
         ]
-        
+
         return {
             "predictedClass": disease_name,
             "classId": top_idx,
